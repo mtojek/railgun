@@ -2,6 +2,7 @@ use regex::Regex;
 use std::{
     io,
     path::{Path, PathBuf},
+    u32,
 };
 
 pub fn load_resources(baseq_dir: &Path) {
@@ -36,6 +37,7 @@ fn list_resources(baseq_dir: &Path) -> io::Result<Vec<PathBuf>> {
             .and_then(|f| f.to_str())
             .and_then(|s| s.strip_prefix("pak"))
             .and_then(|s| s.parse::<u32>().ok())
+            .unwrap_or(u32::MAX)
     });
     return Ok(pk3s);
 }
@@ -43,7 +45,6 @@ fn list_resources(baseq_dir: &Path) -> io::Result<Vec<PathBuf>> {
 #[cfg(test)]
 mod tests {
     use std::fs::File;
-
     use tempfile::tempdir;
 
     use super::*;
@@ -64,5 +65,25 @@ mod tests {
             .collect();
 
         assert_eq!(names, vec!["pak0.pk3", "pak1.pk3", "pak3.pk3", "pak4.pk3"]);
+    }
+
+    #[test]
+    fn empty_directory_returns_empty_list() {
+        let baseq3 = tempdir().unwrap();
+
+        let resources = list_resources(baseq3.path()).unwrap();
+        let names: Vec<&str> = resources
+            .iter()
+            .map(|r| r.file_name().unwrap().to_str().unwrap())
+            .collect();
+
+        assert!(names.is_empty())
+    }
+
+    #[test]
+    fn non_existing_directory_returns_error() {
+        let non_existing = Path::new("foobar");
+        let result = list_resources(non_existing);
+        assert!(result.is_err())
     }
 }
