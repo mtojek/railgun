@@ -7,5 +7,5 @@ fn main() {
 
     let baseq_dir = Path::new("./data/baseq3");
 
-    assets::pk3::load_resources(baseq_dir);
+    assets::pk3::load_resources(baseq_dir).unwrap();
 }
