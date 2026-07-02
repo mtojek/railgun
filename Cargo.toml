@@ -6,3 +6,4 @@ edition = "2024"
 [dependencies]
 regex = "1.12.4"
 tempfile = "3.27.0"
+zip = "8.6.0"

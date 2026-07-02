@@ -1,31 +1,29 @@
 use regex::Regex;
 use std::{
     collections::HashMap,
+    fs::File,
     io,
     path::{Path, PathBuf},
     u32,
 };
-struct ResourceManager {
+use zip::ZipArchive;
+pub struct ResourceManager {
     pk3s: Vec<Archive>,
     resources: HashMap<String, ArchiveRef>,
 }
 
-struct Archive {
+pub struct Archive {
     path: PathBuf,
 }
 
-struct ArchiveRef {
-    archive_id: usize,
+pub struct ArchiveRef {
+    archive_index: usize,
     index: usize,
 }
 
 pub fn load_resources(baseq_dir: &Path) -> io::Result<ResourceManager> {
     let pk3s = list_archives(baseq_dir)?;
-    let resources = build_resources(pk3s);
-
-    pk3s.iter().for_each(|pk3| {
-        println!("{:?}", pk3.path);
-    });
+    let resources = build_resources(&pk3s)?;
 
     Ok(ResourceManager {
         pk3s: pk3s,
@@ -33,12 +31,34 @@ pub fn load_resources(baseq_dir: &Path) -> io::Result<ResourceManager> {
     })
 }
 
-fn build_resources(pk3s: Vec<Archive>) -> HashMap<String, ArchiveRef> {
-    let resources = HashMap::new();
+fn build_resources(pk3s: &Vec<Archive>) -> io::Result<HashMap<String, ArchiveRef>> {
+    let mut resources = HashMap::new();
 
-    for (i, pk3) in pk3s.iter().enumerate() {}
+    for (archive_index, pk3) in pk3s.iter().enumerate() {
+        let f = File::open(pk3.path.clone())?;
+        let mut zip = ZipArchive::new(f)?;
 
-    resources
+        for index in 0..zip.len() {
+            let entry = zip.by_index(index)?;
+
+            println!(
+                "index = {}, name = {}, size = {}",
+                archive_index,
+                entry.name(),
+                entry.size()
+            );
+
+            resources.insert(
+                entry.name().to_string(),
+                ArchiveRef {
+                    archive_index: archive_index,
+                    index: index,
+                },
+            );
+        }
+    }
+
+    Ok(resources)
 }
 
 fn list_archives(baseq_dir: &Path) -> io::Result<Vec<Archive>> {
@@ -69,7 +89,7 @@ fn list_archives(baseq_dir: &Path) -> io::Result<Vec<Archive>> {
             .and_then(|s| s.parse::<u32>().ok())
             .unwrap_or(u32::MAX)
     });
-    return Ok(pk3s);
+    Ok(pk3s)
 }
 
 #[cfg(test)]
